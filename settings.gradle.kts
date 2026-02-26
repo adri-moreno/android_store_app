@@ -24,3 +24,10 @@ dependencyResolutionManagement {
 
 rootProject.name = "AndroidStoreApp"
 include(":app")
+include(":domain")
+include(":core:network")
+include(":core:database")
+include(":core:ui")
+include(":feature:products")
+include(":feature:favorites")
+include(":feature:profile")

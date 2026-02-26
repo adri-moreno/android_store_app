@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="title_products">Products</string>
+    <string name="title_favorites">Favorites</string>
+    <string name="title_my_favorites">My Favorites</string>
+    <string name="title_profile">Profile</string>
+    <string name="action_retry">Retry</string>
+    <string name="action_add_favorite">Add to favorites</string>
+    <string name="action_remove_favorite">Remove from favorites</string>
+    <string name="empty_favorites">You don\'t have any favorites yet</string>
+    <string name="label_favorite_products">Favorite products</string>
+    <plurals name="product_count">
+        <item quantity="one">%d product</item>
+        <item quantity="other">%d products</item>
+    </plurals>
+</resources>
