@@ -1,19 +1,19 @@
 package com.androidstoreapp.feature.profile
 
+import app.cash.turbine.test
 import com.androidstoreapp.core.ui.UiState
 import com.androidstoreapp.domain.model.User
 import com.androidstoreapp.domain.usecase.GetFavoritesUseCase
 import com.androidstoreapp.domain.usecase.GetUserUseCase
 import com.androidstoreapp.domain.util.MainDispatcherRule
-import app.cash.turbine.test
-import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
-import org.junit.Assert.*
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 
@@ -27,7 +27,7 @@ class ProfileViewModelTest {
 
     @Test
     fun `favoriteCount equals number of ids in favorites set`() = runTest {
-        coEvery { getUser() } returns Result.success(User(8, "John", "j@m.com", "555"))
+        every { getUser() } returns flowOf(Result.success(User(8, "John", "j@m.com", "555")))
         every { getFavorites() } returns flowOf(setOf(1, 2, 3))
 
         val vm = ProfileViewModel(getUser, getFavorites)
@@ -37,7 +37,7 @@ class ProfileViewModelTest {
     @Test
     fun `when getUser succeeds, userState is Content`() = runTest {
         val user = User(8, "John", "j@m.com", "555")
-        coEvery { getUser() } returns Result.success(user)
+        every { getUser() } returns flowOf(Result.success(user))
         every { getFavorites() } returns flowOf(emptySet())
 
         val vm = ProfileViewModel(getUser, getFavorites)
@@ -46,7 +46,7 @@ class ProfileViewModelTest {
 
     @Test
     fun `when getUser fails, userState is Error`() = runTest {
-        coEvery { getUser() } returns Result.failure(Exception("404"))
+        every { getUser() } returns flowOf(Result.failure(Exception("404")))
         every { getFavorites() } returns flowOf(emptySet())
 
         val vm = ProfileViewModel(getUser, getFavorites)
@@ -56,7 +56,7 @@ class ProfileViewModelTest {
     @Test
     fun `favoriteCount updates reactively`() = runTest {
         val favFlow = MutableStateFlow<Set<Int>>(emptySet())
-        coEvery { getUser() } returns Result.success(User(8, "John", "j@m.com", "555"))
+        every { getUser() } returns flowOf(Result.success(User(8, "John", "j@m.com", "555")))
         every { getFavorites() } returns favFlow
 
         val vm = ProfileViewModel(getUser, getFavorites)

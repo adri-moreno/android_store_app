@@ -27,7 +27,11 @@ fun ProductsScreen(
     Box(modifier = modifier.fillMaxSize()) {
         when (val s = state) {
             is UiState.Loading -> LoadingView()
-            is UiState.Error -> ErrorView(message = s.message, onRetry = vm::load)
+            is UiState.Error -> ErrorView(
+                throwable = s.throwable,
+                onRetry = vm::load,
+                modifier = Modifier.fillMaxSize()
+            )
             is UiState.Content -> ProductList(products = s.data, onToggle = vm::toggle)
         }
     }

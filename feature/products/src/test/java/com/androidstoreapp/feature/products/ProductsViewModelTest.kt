@@ -1,23 +1,24 @@
 package com.androidstoreapp.feature.products
 
+import app.cash.turbine.test
 import com.androidstoreapp.core.ui.UiState
 import com.androidstoreapp.domain.model.Product
-import com.androidstoreapp.domain.usecase.GetFavoritesUseCase
-import com.androidstoreapp.domain.usecase.GetProductsUseCase
+import com.androidstoreapp.domain.usecase.ObserveProductsUseCase
 import com.androidstoreapp.domain.usecase.ToggleFavoriteUseCase
 import com.androidstoreapp.domain.util.MainDispatcherRule
-import app.cash.turbine.test
-import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
-import org.junit.Assert.*
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 
@@ -26,16 +27,14 @@ class ProductsViewModelTest {
 
     @get:Rule val mainRule = MainDispatcherRule()
 
-    private val getProducts: GetProductsUseCase = mockk()
-    private val getFavorites: GetFavoritesUseCase = mockk()
+    private val observeProducts: ObserveProductsUseCase = mockk()
     private val toggle: ToggleFavoriteUseCase = mockk(relaxed = true)
 
-    private fun buildVm() = ProductsViewModel(getProducts, getFavorites, toggle)
+    private fun buildVm() = ProductsViewModel(observeProducts, toggle)
 
     @Test
     fun `initial uiState is Loading`() = runTest {
-        coEvery { getProducts() } coAnswers { delay(500); Result.success(emptyList()) }
-        every { getFavorites() } returns flowOf(emptySet())
+        every { observeProducts() } returns flow { delay(500); emit(Result.success(emptyList())) }
 
         assertEquals(UiState.Loading, buildVm().uiState.value)
     }
@@ -43,8 +42,7 @@ class ProductsViewModelTest {
     @Test
     fun `when getProducts succeeds, emits Content`() = runTest {
         val products = listOf(Product(1, "Shirt", 19.99, "url"))
-        coEvery { getProducts() } returns Result.success(products)
-        every { getFavorites() } returns flowOf(emptySet())
+        every { observeProducts() } returns flowOf(Result.success(products))
 
         val vm = buildVm()
         val state = vm.uiState.value
@@ -54,9 +52,8 @@ class ProductsViewModelTest {
 
     @Test
     fun `product in favorites set has isFavorite true`() = runTest {
-        val products = listOf(Product(1, "A", 10.0, ""), Product(2, "B", 20.0, ""))
-        coEvery { getProducts() } returns Result.success(products)
-        every { getFavorites() } returns flowOf(setOf(1))
+        val products = listOf(Product(1, "A", 10.0, "", isFavorite = true), Product(2, "B", 20.0, ""))
+        every { observeProducts() } returns flowOf(Result.success(products))
 
         val vm = buildVm()
         val content = vm.uiState.value as UiState.Content
@@ -66,19 +63,18 @@ class ProductsViewModelTest {
 
     @Test
     fun `when getProducts fails, emits Error`() = runTest {
-        coEvery { getProducts() } returns Result.failure(Exception("Network error"))
-        every { getFavorites() } returns flowOf(emptySet())
+        val exception = Exception("Network error")
+        every { observeProducts() } returns flowOf(Result.failure(exception))
 
         val vm = buildVm()
         val state = vm.uiState.value
         assertTrue("Expected Error but got $state", state is UiState.Error)
-        assertEquals("Network error", (state as UiState.Error).message)
+        assertEquals(exception, (state as UiState.Error).throwable)
     }
 
     @Test
     fun `toggle delegates to use case with correct params`() = runTest {
-        coEvery { getProducts() } returns Result.success(emptyList())
-        every { getFavorites() } returns flowOf(emptySet())
+        every { observeProducts() } returns flowOf(Result.success(emptyList()))
 
         buildVm().apply {
             toggle(productId = 3, isFavorite = true)
@@ -88,15 +84,14 @@ class ProductsViewModelTest {
     }
 
     @Test
-    fun `favorites update reactively when observeFavoriteIds emits new set`() = runTest {
-        val favoritesFlow = MutableStateFlow<Set<Int>>(emptySet())
-        coEvery { getProducts() } returns Result.success(listOf(Product(1, "A", 10.0, "")))
-        every { getFavorites() } returns favoritesFlow
+    fun `ui update reactively when use case emits new set`() = runTest {
+        val flow = MutableStateFlow(Result.success(listOf(Product(1, "A", 10.0, ""))))
+        every { observeProducts() } returns flow
 
         val vm = buildVm()
         assertFalse((vm.uiState.value as UiState.Content).data.first().isFavorite)
 
-        favoritesFlow.value = setOf(1)
+        flow.value = Result.success(listOf(Product(1, "A", 10.0, "", isFavorite = true)))
         vm.uiState.test {
             assertTrue((awaitItem() as UiState.Content).data.first().isFavorite)
             cancelAndIgnoreRemainingEvents()

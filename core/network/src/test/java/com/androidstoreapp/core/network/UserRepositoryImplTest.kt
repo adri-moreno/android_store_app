@@ -15,7 +15,8 @@ import java.io.IOException
 class UserRepositoryImplTest {
 
     private val api: ApiService = mockk()
-    private val repo = UserRepositoryImpl(api)
+    private val networkMonitor: NetworkMonitor = mockk(relaxed = true)
+    private val repo = UserRepositoryImpl(api, networkMonitor)
 
     @Test
     fun `getUser maps DTO to domain User`() = runTest {

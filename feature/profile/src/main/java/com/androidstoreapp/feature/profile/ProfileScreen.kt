@@ -30,6 +30,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.androidstoreapp.core.ui.R
 import com.androidstoreapp.core.ui.UiState
+import com.androidstoreapp.core.ui.components.ErrorView
 import com.androidstoreapp.domain.model.User
 import org.koin.compose.viewmodel.koinViewModel
 
@@ -64,9 +65,9 @@ fun ProfileScreen(
 
         when (val userState = state.userState) {
             is UiState.Loading -> CircularProgressIndicator()
-            is UiState.Error -> Text(
-                text = userState.message,
-                color = MaterialTheme.colorScheme.error
+            is UiState.Error -> ErrorView(
+                throwable = userState.throwable,
+                onRetry = vm::load
             )
             is UiState.Content -> UserInfoSection(user = userState.data)
         }

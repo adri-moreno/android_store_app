@@ -1,5 +1,6 @@
 package com.androidstoreapp.domain
 
+import app.cash.turbine.test
 import com.androidstoreapp.domain.repository.ProductRepository
 import com.androidstoreapp.domain.usecase.GetFavoritesUseCase
 import io.mockk.every
@@ -9,7 +10,6 @@ import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import app.cash.turbine.test
 
 class GetFavoritesUseCaseTest {
 

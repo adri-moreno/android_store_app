@@ -6,8 +6,9 @@ import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import java.util.concurrent.TimeUnit
 
-fun provideOkHttpClient(): OkHttpClient =
+fun provideOkHttpClient(networkMonitor: NetworkMonitor): OkHttpClient =
     OkHttpClient.Builder()
+        .addInterceptor(ConnectivityInterceptor(networkMonitor))
         .addInterceptor(HttpLoggingInterceptor().apply {
             level = HttpLoggingInterceptor.Level.BODY
         })

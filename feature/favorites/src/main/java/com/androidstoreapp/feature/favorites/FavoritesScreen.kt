@@ -45,7 +45,11 @@ fun FavoritesScreen(
 
         when (val s = state) {
             is UiState.Loading -> LoadingView()
-            is UiState.Error -> ErrorView(message = s.message, onRetry = {})
+            is UiState.Error -> ErrorView(
+                throwable = s.throwable,
+                onRetry = vm::load,
+                modifier = Modifier.fillMaxSize()
+            )
             is UiState.Content -> {
                 if (s.data.isEmpty()) {
                     EmptyFavoritesView()

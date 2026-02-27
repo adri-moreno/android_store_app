@@ -20,7 +20,8 @@ class ProductRepositoryImplTest {
 
     private val api: ApiService = mockk()
     private val favoriteDataSource: FavoriteLocalDataSource = mockk(relaxed = true)
-    private val repo = ProductRepositoryImpl(api, favoriteDataSource)
+    private val networkMonitor: NetworkMonitor = mockk(relaxed = true)
+    private val repo = ProductRepositoryImpl(api, favoriteDataSource, networkMonitor)
 
     @Test
     fun `getProducts maps DTOs to domain models correctly`() = runTest {
@@ -40,10 +41,23 @@ class ProductRepositoryImplTest {
     }
 
     @Test
-    fun `getProducts returns failure when api throws IOException`() = runTest {
+    fun `getProducts returns failure when api throws IOException and no cache`() = runTest {
         coEvery { api.getProducts() } throws IOException("No connection")
 
         assertTrue(repo.getProducts().isFailure)
+    }
+
+    @Test
+    fun `getProducts returns cached products when api fails after a successful call`() = runTest {
+        val dto = ProductDto(1, "Shirt", 19.99, "desc", "clothing", "img", RatingDto(4.5, 200))
+        coEvery { api.getProducts() } returns listOf(dto)
+        repo.getProducts()
+
+        coEvery { api.getProducts() } throws IOException("No connection")
+        val result = repo.getProducts()
+
+        assertTrue(result.isSuccess)
+        assertEquals(1, result.getOrNull()!!.first().id)
     }
 
     @Test

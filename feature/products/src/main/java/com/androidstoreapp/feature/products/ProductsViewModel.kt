@@ -4,38 +4,37 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.androidstoreapp.core.ui.UiState
 import com.androidstoreapp.domain.model.Product
-import com.androidstoreapp.domain.usecase.GetFavoritesUseCase
-import com.androidstoreapp.domain.usecase.GetProductsUseCase
+import com.androidstoreapp.domain.usecase.ObserveProductsUseCase
 import com.androidstoreapp.domain.usecase.ToggleFavoriteUseCase
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
+@OptIn(ExperimentalCoroutinesApi::class)
 class ProductsViewModel(
-    private val getProducts: GetProductsUseCase,
-    private val getFavorites: GetFavoritesUseCase,
+    private val observeProducts: ObserveProductsUseCase,
     private val toggleFavorite: ToggleFavoriteUseCase
 ) : ViewModel() {
 
-    private val _result = MutableStateFlow<Result<List<Product>>?>(null)
+    private val refreshSignal = MutableStateFlow(Unit)
 
-    val uiState: StateFlow<UiState<List<Product>>> =
-        combine(_result.filterNotNull(), getFavorites()) { result, favIds ->
+    val uiState: StateFlow<UiState<List<Product>>> = refreshSignal
+        .flatMapLatest { observeProducts() }
+        .map { result ->
             result.fold(
-                onSuccess = { list ->
-                    UiState.Content(list.map { it.copy(isFavorite = it.id in favIds) })
-                },
-                onFailure = { UiState.Error(it.message ?: "Error desconocido") }
+                onSuccess = { UiState.Content(it) },
+                onFailure = { UiState.Error(it) }
             )
         }.stateIn(viewModelScope, SharingStarted.Eagerly, UiState.Loading)
 
-    init { load() }
-
-    fun load() { viewModelScope.launch { _result.value = getProducts() } }
+    fun load() {
+        refreshSignal.value = Unit
+    }
 
     fun toggle(productId: Int, isFavorite: Boolean) {
         viewModelScope.launch { toggleFavorite(productId, isFavorite) }

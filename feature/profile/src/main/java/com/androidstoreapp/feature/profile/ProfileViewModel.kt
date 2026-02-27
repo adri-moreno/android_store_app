@@ -6,14 +6,15 @@ import com.androidstoreapp.core.ui.UiState
 import com.androidstoreapp.domain.model.User
 import com.androidstoreapp.domain.usecase.GetFavoritesUseCase
 import com.androidstoreapp.domain.usecase.GetUserUseCase
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.stateIn
-import kotlinx.coroutines.launch
 
+@OptIn(ExperimentalCoroutinesApi::class)
 class ProfileViewModel(
     private val getUser: GetUserUseCase,
     private val getFavorites: GetFavoritesUseCase
@@ -24,18 +25,21 @@ class ProfileViewModel(
         val favoriteCount: Int = 0
     )
 
-    private val _userResult = MutableStateFlow<Result<User>?>(null)
+    private val refreshSignal = MutableStateFlow(Unit)
 
-    val uiState: StateFlow<ProfileUiState> =
-        combine(_userResult.filterNotNull(), getFavorites()) { result, favIds ->
+    val uiState: StateFlow<ProfileUiState> = refreshSignal.flatMapLatest {
+        combine(getUser(), getFavorites()) { userResult, favIds ->
             ProfileUiState(
-                userState = result.fold(
+                userState = userResult.fold(
                     onSuccess = { UiState.Content(it) },
-                    onFailure = { UiState.Error(it.message ?: "Error") }
+                    onFailure = { UiState.Error(it) }
                 ),
                 favoriteCount = favIds.size
             )
-        }.stateIn(viewModelScope, SharingStarted.Eagerly, ProfileUiState())
+        }
+    }.stateIn(viewModelScope, SharingStarted.Eagerly, ProfileUiState())
 
-    init { viewModelScope.launch { _userResult.value = getUser() } }
+    fun load() {
+        refreshSignal.value = Unit
+    }
 }
